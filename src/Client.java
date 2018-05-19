@@ -6,7 +6,18 @@ public class Client {
     static final int serverPort = 6666;
     static final String serverAddress = "127.0.0.1";
 
-    public static void main(String[] ar) {
+    Socket _serverSocket;
+    SocketDataInputWrapper _serverWrapper;
+    BufferedReader _consoleIn;
+
+    public Client() throws IOException {
+        _serverSocket = new Socket(InetAddress.getByName(serverAddress), serverPort);
+        _serverWrapper = new SocketDataInputWrapper(_serverSocket);
+
+        _consoleIn = new BufferedReader(new InputStreamReader(System.in));
+    }
+
+    public static void main(String[] ar) throws IOException {
         new Client().beAClient();
     }
 
@@ -14,17 +25,10 @@ public class Client {
 
 
         try {
-            Socket serverSocket = new Socket(InetAddress.getByName(serverAddress), serverPort);
 
-            SocketDataInputWrapper serverWrapper = new SocketDataInputWrapper(serverSocket);
-            BufferedReader keyboard = new BufferedReader(new InputStreamReader(System.in));
+            registerOnServer();
 
-
-            registerOnServer(keyboard, serverWrapper);
-
-            connectWithAnotherClient(keyboard, serverWrapper);
-
-            System.out.println( "WORKING");
+            connectWithAnotherClient();
 
         } catch (Exception x) {
             x.printStackTrace();
@@ -52,6 +56,11 @@ public class Client {
     }
 
 
+    private static void sendInputToServer(BufferedReader in, DataOutputStream out) {
+
+    }
+
+
     //#endregion
 
     //#region connection setup
@@ -59,13 +68,12 @@ public class Client {
      * prompts the user for a nickname, and sends a request to server to connect with that nickname
      * if the responce is negative, repropmts user
      */
-    private static void connectWithAnotherClient(BufferedReader in,
-                                                 SocketDataInputWrapper serverWrapper) throws IOException {
+    private void connectWithAnotherClient() throws IOException {
 
         while(true) {
-            requestToConnectWithClient(in, serverWrapper);
+            requestToConnectWithOtherClient();
 
-            if(serverWrapper.readUtf().equals(Server.OK)) {
+            if(_serverWrapper.readUtf().equals(Server.OK)) {
                 return;
             }
 
@@ -73,18 +81,15 @@ public class Client {
         }
     }
 
-    private static void requestToConnectWithClient(BufferedReader in,
-                                            SocketDataInputWrapper serverWrapper) throws IOException {
-        String nickname =  propmtForString(in, "What's the nickname of a person you want to talk to?");
+    private void requestToConnectWithOtherClient() throws IOException {
+        String nickname =  propmtForString(_consoleIn, "What's the nickname of a person you want to talk to?");
 
-        serverWrapper.writeUtf(nickname);
-        System.out.println("sent nickname");
+        _serverWrapper.writeUtf(nickname);
     }
 
-    private static void registerOnServer(BufferedReader in,
-                                         SocketDataInputWrapper serverWrapper) throws IOException {
-        String nickname =  propmtForString(in, "What will be your nickname?");
-        serverWrapper.writeUtf(nickname);
+    private void registerOnServer() throws IOException {
+        String nickname =  propmtForString(_consoleIn, "What will be your nickname?");
+        _serverWrapper.writeUtf(nickname);
     }
 
     //#endregion
