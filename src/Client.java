@@ -23,18 +23,46 @@ public class Client {
 
     private void beAClient() {
 
-
         try {
-
             registerOnServer();
 
-            connectWithAnotherClient();
+            var wantsToConnect = askWhatToDo();
+
+            if(wantsToConnect) {
+                connectWithAnotherClient();
+                chat();
+            } else {
+
+
+                var line = _serverWrapper.readUtf();
+                System.out.println(line);
+            }
+
+
 
         } catch (Exception x) {
             x.printStackTrace();
         }
     }
 
+    /**
+     * @return true if he wants to connect, false if to wait
+     */
+    private boolean askWhatToDo() throws IOException {
+
+        while(true) {
+            var reply = propmtForString(_consoleIn, "what do you want: connect or wait?");
+
+            if(reply.equals("c") || reply.equals("connect")) {
+                return true;
+            }
+            if (reply.equals("w") || reply.equals("wait")) {
+                return false;
+            }
+
+            System.out.println("enter \"connect\" or \"c\" to connect, \"wait\" or \"w\" to wait");
+        }
+    }
 
     //#region chatting
     /**
@@ -43,21 +71,37 @@ public class Client {
      *
      *
      */
-    private static void PrintAndSendThisClientsMessages(DataOutputStream out)
+    private void chat()
     {
-        BufferedReader consoleIn = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("started chatting");
+        new Thread(this::sendTextToServer).start();
 
-//        try {
-//
-//
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
+        new Thread(this::displayTextFromServer).start();
     }
 
+    private void sendTextToServer() {
+        try {
+            while(true) {
+                var line = _consoleIn.readLine();
+                _serverWrapper.writeUtf(line);
+            }
 
-    private static void sendInputToServer(BufferedReader in, DataOutputStream out) {
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
+    // TODO: remember the nicname we connected to, and show it with all the messages
+    private void displayTextFromServer() {
+        try {
+            while(true) {
+                var line = _serverWrapper.readUtf();
+                System.out.println("the other one says: " + line);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 

@@ -63,7 +63,7 @@ public class Server {
 
         var thisClientWrapper = new SocketDataInputWrapper(clientSocket);
 
-        registerClient(thisClientWrapper, clientSocket);
+        var thisNickname =  registerClient(thisClientWrapper, clientSocket);
 
         Socket otherClient;
         do {
@@ -71,14 +71,21 @@ public class Server {
 
         } while (otherClient == null);
 
-        transferMessagesBetweenClients(thisClientWrapper, new SocketDataInputWrapper(otherClient));
+        //TODO: direct output from server to clients user
+        var otherClientWrapper = new SocketDataInputWrapper(otherClient);
+        otherClientWrapper.writeUtf("connected you to the " + thisNickname + ", per his request");
+
+//        transferMessagesBetweenClientsInSepThread(thisClientWrapper, otherClientWrapper);
+//        transferMessagesBetweenClientsInSepThread(otherClientWrapper, thisClientWrapper);
     }
 
+    //#region connection
     /**
      * waits until client sends a line,
      * then stores it as a nickname in the global hash table
+     * @return created nickname
      */
-    private void registerClient(SocketDataInputWrapper sdWrapper, Socket client) throws Exception {
+    private String registerClient(SocketDataInputWrapper sdWrapper, Socket client) throws Exception {
 
         var nickname = sdWrapper.readUtf();
 
@@ -88,6 +95,7 @@ public class Server {
 
         connectedClients.put(nickname, client);
         System.out.println("registered client with a nickname: " + nickname);
+        return nickname;
     }
 
     //TODO: handle when user sends his own nickname
@@ -122,16 +130,33 @@ public class Server {
 
         return null;
     }
+    //#endregion
 
 
     /**
-     * successively waits for an input of @param thisSocketWrapper
-     * then writes it to @param otherSocketWrapper,
-     * in an infinite loop
+     * in a infinite loop,
+     * successively reads from the @param thisSocketWrapper
+     * and writes to the @param otherSocketWrapper
      */
     private void transferMessagesBetweenClients(
-            SocketDataInputWrapper thisSocketWrapper, SocketDataInputWrapper otherSocketWrapper) {
+            SocketDataInputWrapper thisSocketWrapper, SocketDataInputWrapper otherSocketWrapper) throws IOException {
 
-        System.out.println( "transferMessagesBetweenClients looping!");
+        while (true) {
+            var message = thisSocketWrapper.readUtf();
+            otherSocketWrapper.writeUtf(message);
+        }
     }
+
+    private void transferMessagesBetweenClientsInSepThread(
+            SocketDataInputWrapper thisSocketWrapper, SocketDataInputWrapper otherSocketWrapper) throws IOException {
+
+        new Thread(() -> {
+            try {
+                transferMessagesBetweenClients(thisSocketWrapper, otherSocketWrapper);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
 }
