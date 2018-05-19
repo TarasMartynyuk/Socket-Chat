@@ -39,7 +39,6 @@ public class Server {
                     try {
                         serveClient(socket);
 
-
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -65,18 +64,24 @@ public class Server {
 
         var thisNickname =  registerClient(thisClientWrapper, clientSocket);
 
-        Socket otherClient;
-        do {
-            otherClient = parseClientsConnectionRequest(thisClientWrapper);
+        boolean wantsToConnect = parseClientInteractionType(thisClientWrapper);
 
-        } while (otherClient == null);
+        if(wantsToConnect) {
+            Socket otherClient;
+            do {
+                otherClient = parseClientsConnectionRequest(thisClientWrapper);
 
-        //TODO: direct output from server to clients user
-        var otherClientWrapper = new SocketDataInputWrapper(otherClient);
-        otherClientWrapper.writeUtf("connected you to the " + thisNickname + ", per his request");
+            } while (otherClient == null);
 
-//        transferMessagesBetweenClientsInSepThread(thisClientWrapper, otherClientWrapper);
-//        transferMessagesBetweenClientsInSepThread(otherClientWrapper, thisClientWrapper);
+            //TODO: direct output from server to clients user
+            var otherClientWrapper = new SocketDataInputWrapper(otherClient);
+            otherClientWrapper.writeUtf("connected you to the " + thisNickname + ", per his request");
+
+            transferMessagesTwoWay(thisClientWrapper, otherClientWrapper);
+        }
+
+        // the client that wants to wait does just that, until a more initiative client makes the first move
+        // the 2-way channel will be open when the initiative client will connect to the awaiting one
     }
 
     //#region connection
@@ -96,6 +101,27 @@ public class Server {
         connectedClients.put(nickname, client);
         System.out.println("registered client with a nickname: " + nickname);
         return nickname;
+    }
+
+    /**
+     * waits for client to input string,
+     * then interprets it as a type of interaction (wait or connect)
+     *
+     * returns true if client wants to connect,
+     * and false if he wants to wait for a connection
+     */
+    private boolean parseClientInteractionType(SocketDataInputWrapper clientWrapper) throws IOException {
+        var interactionType = clientWrapper.readUtf();
+
+        if(interactionType.equals(Client.CONNECT)) {
+            return true;
+        }
+
+        if(interactionType.equals(Client.WAIT)) {
+            return false;
+        }
+
+        throw new IllegalArgumentException("the interaction type sent by client must be either a Client.Connect or Client.Wait constant");
     }
 
     //TODO: handle when user sends his own nickname
@@ -132,13 +158,23 @@ public class Server {
     }
     //#endregion
 
+    //#region chat
+    /**
+     * one thread for each way binding
+     */
+    private void transferMessagesTwoWay(
+            SocketDataInputWrapper thisSocketWrapper, SocketDataInputWrapper otherSocketWrapper) throws IOException {
 
+        transferMessagesOneWayInSepThread(thisSocketWrapper, otherSocketWrapper);
+        transferMessagesOneWayInSepThread(otherSocketWrapper, thisSocketWrapper);
+    }
+    
     /**
      * in a infinite loop,
      * successively reads from the @param thisSocketWrapper
      * and writes to the @param otherSocketWrapper
      */
-    private void transferMessagesBetweenClients(
+    private void transferMessagesOneWay(
             SocketDataInputWrapper thisSocketWrapper, SocketDataInputWrapper otherSocketWrapper) throws IOException {
 
         while (true) {
@@ -147,16 +183,16 @@ public class Server {
         }
     }
 
-    private void transferMessagesBetweenClientsInSepThread(
+    private void transferMessagesOneWayInSepThread(
             SocketDataInputWrapper thisSocketWrapper, SocketDataInputWrapper otherSocketWrapper) throws IOException {
 
         new Thread(() -> {
             try {
-                transferMessagesBetweenClients(thisSocketWrapper, otherSocketWrapper);
+                transferMessagesOneWay(thisSocketWrapper, otherSocketWrapper);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        });
+        }).start();
     }
-
+    //#endregion
 }

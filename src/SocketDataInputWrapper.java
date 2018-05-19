@@ -5,18 +5,17 @@ import java.net.Socket;
 
 public class SocketDataInputWrapper {
 
-    private DataInputStream din;
-    private DataOutputStream dout;
+    private DataInputStream _din;
+    private DataOutputStream _dout;
 
     public SocketDataInputWrapper(Socket socket) throws IOException {
-        din = new DataInputStream(socket.getInputStream());
-        dout = new DataOutputStream(socket.getOutputStream());
+        _din = new DataInputStream(socket.getInputStream());
+        _dout = new DataOutputStream(socket.getOutputStream());
     }
 
 
     public void writeUtf(String text) throws IOException {
         getDout().writeUTF(text);
-//        getDout().size();
         getDout().flush();
     }
 
@@ -25,11 +24,11 @@ public class SocketDataInputWrapper {
     }
 
     public DataInputStream getDin() {
-        return din;
+        return _din;
     }
 
     public DataOutputStream getDout() {
-        return dout;
+        return _dout;
     }
 
 

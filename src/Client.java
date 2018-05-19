@@ -3,6 +3,9 @@ import java.io.*;
 
 public class Client {
 
+    public static final String WAIT = "WAIT";
+    public static final String CONNECT = "CONNECT";
+
     static final int serverPort = 6666;
     static final String serverAddress = "127.0.0.1";
 
@@ -26,15 +29,18 @@ public class Client {
         try {
             registerOnServer();
 
-            var wantsToConnect = askWhatToDo();
+            boolean wantsToConnect = askWhatToDo();
+            sendInteractionTypeToServer(wantsToConnect);
 
             if(wantsToConnect) {
+
                 connectWithAnotherClient();
                 chat();
             } else {
 
-
+                // the server sends a message when someone has connected to us
                 var line = _serverWrapper.readUtf();
+                chat();
                 System.out.println(line);
             }
 
@@ -136,6 +142,12 @@ public class Client {
         _serverWrapper.writeUtf(nickname);
     }
 
+    private void sendInteractionTypeToServer(boolean wantsToConnect) throws IOException {
+        String msg = wantsToConnect ?
+                CONNECT : WAIT;
+
+        _serverWrapper.writeUtf(msg);
+    }
     //#endregion
 
     private static String propmtForString(BufferedReader in, String prompt) throws  IOException {
