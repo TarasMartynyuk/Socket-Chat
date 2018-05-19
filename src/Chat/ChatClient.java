@@ -1,7 +1,10 @@
+package Chat;
+
+import utils.SocketDataIOWrapper;
 import java.net.*;
 import java.io.*;
 
-public class Client {
+public class ChatClient {
 
     public static final String WAIT = "WAIT";
     public static final String CONNECT = "CONNECT";
@@ -10,18 +13,18 @@ public class Client {
     static final String serverAddress = "127.0.0.1";
 
     Socket _serverSocket;
-    SocketDataInputWrapper _serverWrapper;
+    SocketDataIOWrapper _serverWrapper;
     BufferedReader _consoleIn;
 
-    public Client() throws IOException {
+    public ChatClient() throws IOException {
         _serverSocket = new Socket(InetAddress.getByName(serverAddress), serverPort);
-        _serverWrapper = new SocketDataInputWrapper(_serverSocket);
+        _serverWrapper = new SocketDataIOWrapper(_serverSocket);
 
         _consoleIn = new BufferedReader(new InputStreamReader(System.in));
     }
 
     public static void main(String[] ar) throws IOException {
-        new Client().beAClient();
+        new ChatClient().beAClient();
     }
 
     private void beAClient() {
@@ -123,7 +126,7 @@ public class Client {
         while(true) {
             requestToConnectWithOtherClient();
 
-            if(_serverWrapper.readUtf().equals(Server.OK)) {
+            if(_serverWrapper.readUtf().equals(ChatServer.OK)) {
                 return;
             }
 

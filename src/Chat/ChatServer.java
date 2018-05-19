@@ -1,33 +1,36 @@
+package Chat;
+
 import java.net.*;
 import java.io.*;
 import java.util.HashMap;
+import utils.SocketDataIOWrapper;
 
-public class Server {
+public class ChatServer {
 
     public static final String  OK = "OK";
     public static final String  NOT_OK = "NOT_OK";
 
+    private static final int PORT = 6666;
+
+    private ServerSocket _serverSocket;
     private HashMap<String, Socket> connectedClients = new HashMap<>();
 
-    public static void main(String[] ar) {
+    public static void main(String[] ar) throws IOException {
 
-        new Server().serve();
+        new ChatServer().serve();
+    }
 
-
+    public ChatServer() throws IOException {
+        this._serverSocket = new ServerSocket(PORT);
     }
 
     private void serve() {
-        int port = 6666;
-
 
         try {
-            ServerSocket ss = new ServerSocket(port);
-
             System.out.println("Waiting for a client...");
 
-
             while(true) {
-                Socket socket = ss.accept();
+                Socket socket = _serverSocket.accept();
 
 
                 //TODO: release resources properly
@@ -60,7 +63,7 @@ public class Server {
      */
     private void serveClient(Socket clientSocket) throws Exception {
 
-        var thisClientWrapper = new SocketDataInputWrapper(clientSocket);
+        var thisClientWrapper = new SocketDataIOWrapper(clientSocket);
 
         var thisNickname =  registerClient(thisClientWrapper, clientSocket);
 
@@ -74,7 +77,7 @@ public class Server {
             } while (otherClient == null);
 
             //TODO: direct output from server to clients user
-            var otherClientWrapper = new SocketDataInputWrapper(otherClient);
+            var otherClientWrapper = new SocketDataIOWrapper(otherClient);
             otherClientWrapper.writeUtf("connected you to the " + thisNickname + ", per his request");
 
             transferMessagesTwoWay(thisClientWrapper, otherClientWrapper);
@@ -90,7 +93,7 @@ public class Server {
      * then stores it as a nickname in the global hash table
      * @return created nickname
      */
-    private String registerClient(SocketDataInputWrapper sdWrapper, Socket client) throws Exception {
+    private String registerClient(SocketDataIOWrapper sdWrapper, Socket client) throws Exception {
 
         var nickname = sdWrapper.readUtf();
 
@@ -110,18 +113,18 @@ public class Server {
      * returns true if client wants to connect,
      * and false if he wants to wait for a connection
      */
-    private boolean parseClientInteractionType(SocketDataInputWrapper clientWrapper) throws IOException {
+    private boolean parseClientInteractionType(SocketDataIOWrapper clientWrapper) throws IOException {
         var interactionType = clientWrapper.readUtf();
 
-        if(interactionType.equals(Client.CONNECT)) {
+        if(interactionType.equals(ChatClient.CONNECT)) {
             return true;
         }
 
-        if(interactionType.equals(Client.WAIT)) {
+        if(interactionType.equals(ChatClient.WAIT)) {
             return false;
         }
 
-        throw new IllegalArgumentException("the interaction type sent by client must be either a Client.Connect or Client.Wait constant");
+        throw new IllegalArgumentException("the interaction type sent by client must be either a Chat.ChatClient.Connect or Chat.ChatClient.Wait constant");
     }
 
     //TODO: handle when user sends his own nickname
@@ -135,7 +138,7 @@ public class Server {
      * else, returns null and sends the NOT_OK to client
      *
      */
-    private Socket parseClientsConnectionRequest(SocketDataInputWrapper clientWrapper) throws IOException {
+    private Socket parseClientsConnectionRequest(SocketDataIOWrapper clientWrapper) throws IOException {
 
         var nickname = clientWrapper.getDin().readUTF();
 
@@ -163,7 +166,7 @@ public class Server {
      * one thread for each way binding
      */
     private void transferMessagesTwoWay(
-            SocketDataInputWrapper thisSocketWrapper, SocketDataInputWrapper otherSocketWrapper) throws IOException {
+            SocketDataIOWrapper thisSocketWrapper, SocketDataIOWrapper otherSocketWrapper) throws IOException {
 
         transferMessagesOneWayInSepThread(thisSocketWrapper, otherSocketWrapper);
         transferMessagesOneWayInSepThread(otherSocketWrapper, thisSocketWrapper);
@@ -175,7 +178,7 @@ public class Server {
      * and writes to the @param otherSocketWrapper
      */
     private void transferMessagesOneWay(
-            SocketDataInputWrapper thisSocketWrapper, SocketDataInputWrapper otherSocketWrapper) throws IOException {
+            SocketDataIOWrapper thisSocketWrapper, SocketDataIOWrapper otherSocketWrapper) throws IOException {
 
         while (true) {
             var message = thisSocketWrapper.readUtf();
@@ -184,7 +187,7 @@ public class Server {
     }
 
     private void transferMessagesOneWayInSepThread(
-            SocketDataInputWrapper thisSocketWrapper, SocketDataInputWrapper otherSocketWrapper) throws IOException {
+            SocketDataIOWrapper thisSocketWrapper, SocketDataIOWrapper otherSocketWrapper) throws IOException {
 
         new Thread(() -> {
             try {

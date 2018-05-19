@@ -1,14 +1,13 @@
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+package utils;
+import java.io.*;
 import java.net.Socket;
 
-public class SocketDataInputWrapper {
+public class SocketDataIOWrapper {
 
     private DataInputStream _din;
     private DataOutputStream _dout;
 
-    public SocketDataInputWrapper(Socket socket) throws IOException {
+    public SocketDataIOWrapper(Socket socket) throws IOException {
         _din = new DataInputStream(socket.getInputStream());
         _dout = new DataOutputStream(socket.getOutputStream());
     }
@@ -30,7 +29,4 @@ public class SocketDataInputWrapper {
     public DataOutputStream getDout() {
         return _dout;
     }
-
-
-
 }
